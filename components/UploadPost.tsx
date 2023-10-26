@@ -10,7 +10,8 @@ import {
 import { FontAwesome5 } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as VideoThumbnails from "expo-video-thumbnails";
-
+import { Storage } from "aws-amplify";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 const UploadPost = () => {
   const [video, setVideo] = useState<null | string>(null);
   const [thumbnail, setThumbnail] = useState<null | string>(null);
@@ -26,6 +27,39 @@ const UploadPost = () => {
     }
   };
 
+  const uploadMediaToStorage = async (mediaUri: string) => {
+    const response = await fetch(mediaUri);
+    const blob = response.blob();
+    const result = await Storage.put(mediaUri, blob);
+    return result.key;
+  };
+
+  const uploadVideoAndThumbnailToStorage = async (
+    videoUri: string,
+    thumbnailUri: string
+  ) => {
+    const videoStorageKey = await uploadMediaToStorage(videoUri);
+    const thumbnailStorageKey = await uploadMediaToStorage(thumbnailUri);
+    const value = {
+      videoKey: videoStorageKey,
+      thumbnailKey: thumbnailStorageKey,
+    };
+    await storeData(value);
+  };
+
+  const storeData = async (value: {
+    videoKey: string;
+    thumbnailKey: string;
+  }) => {
+    const jsonValue = await AsyncStorage.getItem("uploads");
+    const existingUploads = jsonValue != null ? JSON.parse(jsonValue) : null;
+    if (existingUploads != null && existingUploads.length > 0) {
+      existingUploads.push(value);
+      value = existingUploads;
+    }
+    await AsyncStorage.setItem("uploads", JSON.stringify(value));
+  };
+
   const selectVideoFile = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
@@ -37,8 +71,10 @@ const UploadPost = () => {
     if (!result.canceled) {
       setVideo(result.assets[0].uri);
       generateThumbnail(result.assets[0].uri);
+      uploadVideoAndThumbnailToStorage(video, thumbnail);
     }
   };
+
   return thumbnail ? (
     <View style={styled.thumbnailContainer}>
       <Image

@@ -1,0 +1,23 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-besocialapp-dev-103217-authRole",
+      "UnauthRoleArn": "arn:aws:iam::337877172808:role/amplify-besocialapp-dev-103217-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::337877172808:role/amplify-besocialapp-dev-103217-authRole",
+      "Region": "us-east-2",
+      "DeploymentBucketName": "amplify-besocialapp-dev-103217-deployment",
+      "UnauthRoleName": "amplify-besocialapp-dev-103217-unauthRole",
+      "StackName": "amplify-besocialapp-dev-103217",
+      "StackId": "arn:aws:cloudformation:us-east-2:337877172808:stack/amplify-besocialapp-dev-103217/91e5afd0-6f2b-11ee-b593-0a77db78ff0d",
+      "AmplifyAppId": "d3j9jcap0cxhdy"
+    },
+    "categories": {
+      "auth": {
+        "besocialapp4bea51d7": {}
+      },
+      "storage": {
+        "besocialstore": {}
+      }
+    }
+  }
+}
