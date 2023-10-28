@@ -3,10 +3,16 @@ import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import CreatePostButton from "../assets/images/create.png";
 
-const HomeBottomNav = ({ goToCreatePost }: { goToCreatePost: () => void }) => {
+const HomeBottomNav = ({
+  goToCreatePost,
+  fetchValues,
+}: {
+  goToCreatePost: () => void;
+  fetchValues: () => void;
+}) => {
   return (
     <View style={styled.container}>
-      <TouchableOpacity onPress={goToCreatePost}>
+      <TouchableOpacity onPress={fetchValues}>
         <Ionicons name="home" size={24} color="#FFFFFF" />
       </TouchableOpacity>
       <TouchableOpacity onPress={goToCreatePost}>

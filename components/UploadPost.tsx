@@ -13,37 +13,86 @@ import * as VideoThumbnails from "expo-video-thumbnails";
 import { Storage } from "aws-amplify";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 const UploadPost = () => {
-  const [video, setVideo] = useState<null | string>(null);
   const [thumbnail, setThumbnail] = useState<null | string>(null);
 
   const generateThumbnail = async (videoUri: string) => {
-    try {
-      const { uri } = await VideoThumbnails.getThumbnailAsync(videoUri, {
-        time: 2500,
-      });
-      setThumbnail(uri);
-    } catch (e) {
-      console.warn(e);
-    }
+    const result = await VideoThumbnails.getThumbnailAsync(videoUri, {
+      time: 2500,
+    });
+    setThumbnail(result.uri);
+    return result.uri;
   };
 
-  const uploadMediaToStorage = async (mediaUri: string) => {
+  const uploadMediaToStorage = async (mediaUri: string, key: string) => {
     const response = await fetch(mediaUri);
     const blob = response.blob();
-    const result = await Storage.put(mediaUri, blob);
+
+    const result = await Storage.put(key, blob);
     return result.key;
+  };
+
+  const getFileExtension = (fileName: string) => {
+    const splitResult = fileName.split(".");
+    console.log("split file name", splitResult);
+
+    return splitResult;
+  };
+  const getUploadedMedia = async () => {
+    const jsonValue = await AsyncStorage.getItem("uploads");
+    return jsonValue != null ? JSON.parse(jsonValue) : null;
   };
 
   const uploadVideoAndThumbnailToStorage = async (
     videoUri: string,
+    fileName: string,
     thumbnailUri: string
   ) => {
-    const videoStorageKey = await uploadMediaToStorage(videoUri);
-    const thumbnailStorageKey = await uploadMediaToStorage(thumbnailUri);
+    const existingUploads = await getUploadedMedia();
+    const fileExtension = getFileExtension(fileName);
+    var uploadKey = fileExtension[0];
+    var extension = fileExtension[1];
+    console.log(uploadKey, extension);
+    if (existingUploads != null && existingUploads.length > 0) {
+      const uploadedPhotoKeys = existingUploads.map(
+        (upload: { videoKey: any }) => upload.videoKey
+      );
+      console.log(uploadedPhotoKeys);
+      while (uploadedPhotoKeys.includes(uploadKey + "." + extension)) {
+        uploadKey = uploadKey + "x";
+      }
+    }
+    uploadKey = uploadKey + "." + extension;
+
+    const videoStorageKey = await uploadMediaToStorage(
+      videoUri,
+      "videos/" + uploadKey
+    );
+    uploadKey = fileExtension[0];
+    if (existingUploads != null && existingUploads.length > 0) {
+      const uploadedThumbnailKeys = existingUploads.map(
+        (upload: { thumbnailKey: any }) => upload.thumbnailKey
+      );
+      console.log(uploadedThumbnailKeys);
+
+      while (uploadedThumbnailKeys.includes(uploadKey + ".jpeg")) {
+        uploadKey = uploadKey + "x";
+      }
+      uploadKey = uploadKey + ".jpeg";
+    }
+    const thumbnailStorageKey = await uploadMediaToStorage(
+      thumbnailUri,
+      "thumbnails/" + uploadKey
+    );
     const value = {
       videoKey: videoStorageKey,
       thumbnailKey: thumbnailStorageKey,
     };
+    console.log(
+      "data uploaded successfully to s3 storage",
+      videoStorageKey,
+      thumbnailStorageKey
+    );
+
     await storeData(value);
   };
 
@@ -51,13 +100,15 @@ const UploadPost = () => {
     videoKey: string;
     thumbnailKey: string;
   }) => {
-    const jsonValue = await AsyncStorage.getItem("uploads");
-    const existingUploads = jsonValue != null ? JSON.parse(jsonValue) : null;
+    const existingUploads = await getUploadedMedia();
     if (existingUploads != null && existingUploads.length > 0) {
       existingUploads.push(value);
-      value = existingUploads;
+      const newValue = existingUploads;
+      await AsyncStorage.setItem("uploads", JSON.stringify(newValue));
+    } else {
+      await AsyncStorage.setItem("uploads", JSON.stringify([value]));
     }
-    await AsyncStorage.setItem("uploads", JSON.stringify(value));
+    console.log("data stored successfully to local storage");
   };
 
   const selectVideoFile = async () => {
@@ -69,9 +120,12 @@ const UploadPost = () => {
     });
 
     if (!result.canceled) {
-      setVideo(result.assets[0].uri);
-      generateThumbnail(result.assets[0].uri);
-      uploadVideoAndThumbnailToStorage(video, thumbnail);
+      const generatedThumbnail = await generateThumbnail(result.assets[0].uri);
+      uploadVideoAndThumbnailToStorage(
+        result.assets[0].uri,
+        result.assets[0].fileName ?? "upload-video.MOV",
+        generatedThumbnail
+      );
     }
   };
 
